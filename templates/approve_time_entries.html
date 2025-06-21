@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Approve Time Entries - Employee Time Tracker{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Pending Time Entry Approvals</h1>
+        
+        {% if pending_entries %}
+        <div class="grid gap-6">
+            {% for entry in pending_entries %}
+            <div class="border border-gray-200 rounded-lg p-6">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-3">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-gray-700">{{ entry.user.full_name[0].upper() }}</span>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-lg font-medium text-gray-900">{{ entry.user.full_name }}</h3>
+                                <p class="text-sm text-gray-500">{{ entry.user.role.title() }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <i data-feather="calendar" class="h-4 w-4 text-gray-400 mr-2"></i>
+                                <span class="text-sm text-gray-600">Date: {{ entry.date.strftime('%B %d, %Y') }}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i data-feather="clock" class="h-4 w-4 text-gray-400 mr-2"></i>
+                                <span class="text-sm text-gray-600">Hours: {{ entry.hours }} hours</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i data-feather="send" class="h-4 w-4 text-gray-400 mr-2"></i>
+                                <span class="text-sm text-gray-600">Submitted: {{ entry.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Reason/Notes:</h4>
+                            <div class="bg-gray-50 p-3 rounded-md">
+                                <p class="text-sm text-gray-800">{{ entry.reason }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 sm:mt-0 sm:ml-6 flex space-x-3">
+                        <a href="{{ url_for('approve_time_entry', entry_id=entry.id) }}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium">
+                            <i data-feather="check" class="h-4 w-4 inline mr-1"></i>
+                            Approve
+                        </a>
+                        <a href="{{ url_for('reject_time_entry', entry_id=entry.id) }}" 
+                           class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm font-medium"
+                           onclick="return confirm('Are you sure you want to reject this time entry?')">
+                            <i data-feather="x" class="h-4 w-4 inline mr-1"></i>
+                            Reject
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <i data-feather="clock" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+            <p class="text-gray-500">No pending time entry approvals.</p>
+            <a href="{{ url_for('dashboard') }}" class="mt-4 inline-block text-blue-600 hover:text-blue-500">
+                Back to Dashboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

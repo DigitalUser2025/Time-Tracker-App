@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Employee Time Tracker{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Time Reports</h1>
+        
+        <!-- Filters -->
+        <form method="GET" class="mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="employee_id" class="block text-sm font-medium text-gray-700">Employee</label>
+                    <select id="employee_id" name="employee_id" 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="">All Employees</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}" {% if selected_employee == employee.id %}selected{% endif %}>
+                            {{ employee.full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div class="flex items-end space-x-2">
+                    <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i data-feather="filter" class="h-4 w-4 inline mr-1"></i>
+                        Filter
+                    </button>
+                    {% if logs %}
+                    <a href="{{ url_for('export_reports', employee_id=selected_employee, start_date=start_date, end_date=end_date) }}" 
+                       class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-center">
+                        <i data-feather="download" class="h-4 w-4 inline mr-1"></i>
+                        Export Excel
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+        
+        <!-- Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <i data-feather="clock" class="h-8 w-8 text-blue-600 mr-3"></i>
+                    <div>
+                        <p class="text-sm text-blue-600">Total Hours</p>
+                        <p class="text-2xl font-bold text-blue-900">{{ "%.2f"|format(total_hours) }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <i data-feather="log-in" class="h-8 w-8 text-green-600 mr-3"></i>
+                    <div>
+                        <p class="text-sm text-green-600">Regular Hours</p>
+                        <p class="text-2xl font-bold text-green-900">{{ "%.2f"|format(total_regular_hours) }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-yellow-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <i data-feather="edit" class="h-8 w-8 text-yellow-600 mr-3"></i>
+                    <div>
+                        <p class="text-sm text-yellow-600">Manual Hours</p>
+                        <p class="text-2xl font-bold text-yellow-900">{{ "%.2f"|format(total_manual_hours) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Report Table -->
+        {% if logs %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Regular Hours</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manual Hours</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for log in logs %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8">
+                                    <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-xs font-medium text-gray-700">{{ log.user.full_name[0].upper() }}</span>
+                                    </div>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">{{ log.user.full_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ log.date.strftime('%B %d, %Y') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "%.2f"|format(log.regular_hours) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "%.2f"|format(log.manual_hours) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                            {{ "%.2f"|format(log.total_hours) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <i data-feather="bar-chart" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+            <p class="text-gray-500">No time logs found for the selected criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

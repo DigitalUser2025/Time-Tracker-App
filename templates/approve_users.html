@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Approve Users - Employee Time Tracker{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Pending User Approvals</h1>
+        
+        {% if pending_users %}
+        <div class="grid gap-6">
+            {% for user in pending_users %}
+            <div class="border border-gray-200 rounded-lg p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-medium text-gray-900">{{ user.full_name }}</h3>
+                        <div class="mt-2 space-y-1">
+                            <p class="text-sm text-gray-600">
+                                <i data-feather="phone" class="h-4 w-4 inline mr-1"></i>
+                                {{ user.phone_number }}
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                <i data-feather="calendar" class="h-4 w-4 inline mr-1"></i>
+                                Registered: {{ user.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                <i data-feather="help-circle" class="h-4 w-4 inline mr-1"></i>
+                                Security Question: {{ user.security_question }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 sm:mt-0 sm:ml-6 flex space-x-3">
+                        <a href="{{ url_for('approve_user', user_id=user.id) }}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium">
+                            <i data-feather="check" class="h-4 w-4 inline mr-1"></i>
+                            Approve
+                        </a>
+                        <a href="{{ url_for('reject_user', user_id=user.id) }}" 
+                           class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm font-medium"
+                           onclick="return confirm('Are you sure you want to reject and permanently delete this user? This action cannot be undone.')">
+                            <i data-feather="x" class="h-4 w-4 inline mr-1"></i>
+                            Reject & Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <i data-feather="users" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+            <p class="text-gray-500">No pending user approvals.</p>
+            <a href="{{ url_for('dashboard') }}" class="mt-4 inline-block text-blue-600 hover:text-blue-500">
+                Back to Dashboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
