@@ -28,6 +28,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 # Session configuration for persistent login
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # 30 days for employees
+# Required for secure, persistent cookies on Render
+app.config['SESSION_COOKIE_SECURE'] = True           # Only send over HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True         # Prevent JS access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'        # Avoid cross-site issues
 
 # Initialize the app with the extension
 db.init_app(app)
