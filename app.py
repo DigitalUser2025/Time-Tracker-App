@@ -1,96 +1,88 @@
 import os
 import logging
-from datetime import datetime, timedelta
-from flask import Flask, session
+from datetime import timedelta
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)
 
-# Create the app
+# Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
+
+# Use ProxyFix for correct URL scheme behind proxies like Render
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///timetracker.db")
+# Database connection string from environment
+# Append sslmode=require for Neon DB connection
+database_url = os.environ.get("DATABASE_URL", "sqlite:///timetracker.db")
+if database_url.startswith("postgres://"):
+    # Replace deprecated prefix for SQLAlchemy compatibility if needed
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Ensure SSL mode for Neon PostgreSQL
+if "sslmode" not in database_url:
+    sep = "&" if "?" in database_url else "?"
+    database_url += f"{sep}sslmode=require"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
 
-# Session configuration for persistent login
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # 30 days for employees
-# Required for secure, persistent cookies on Render
-app.config['SESSION_COOKIE_SECURE'] = True           # Only send over HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True         # Prevent JS access
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'        # Avoid cross-site issues
+# Session configuration
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Initialize the app with the extension
+# Initialize SQLAlchemy with Flask app
 db.init_app(app)
 
 with app.app_context():
-    # Import models to ensure tables are created
+    # Import your models here to register them with SQLAlchemy
     import models
+
+    # Create tables if they don't exist
     db.create_all()
-    
-    # Create default admin user
+
+    # Create default users if they don't exist
     from models import User
-    from werkzeug.security import generate_password_hash
-    
-    # Create default admin user
-    admin_exists = User.query.filter_by(phone_number="0000000000").first()
-    if not admin_exists:
-        admin_user = User(
-            phone_number="0000000000",
-            password_hash=generate_password_hash("admin123"),
-            security_question="What is your favorite color?",
-            security_answer="blue",
-            role="admin",
-            is_approved=True,
-            full_name="System Administrator"
-        )
-        db.session.add(admin_user)
-        logging.info("Default admin user created")
-    
-    # Create demo manager user
-    manager_exists = User.query.filter_by(phone_number="1111111111").first()
-    if not manager_exists:
-        manager_user = User(
-            phone_number="1111111111",
-            password_hash=generate_password_hash("manager123"),
-            security_question="What city were you born in?",
-            security_answer="chicago",
-            role="manager",
-            is_approved=True,
-            full_name="Demo Manager"
-        )
-        db.session.add(manager_user)
-        logging.info("Demo manager user created")
-    
-    # Create demo employee user
-    employee_exists = User.query.filter_by(phone_number="2222222222").first()
-    if not employee_exists:
-        employee_user = User(
-            phone_number="2222222222",
-            password_hash=generate_password_hash("employee123"),
-            security_question="What was your first pet's name?",
-            security_answer="buddy",
-            role="employee",
-            is_approved=True,
-            full_name="Demo Employee"
-        )
-        db.session.add(employee_user)
-        logging.info("Demo employee user created")
-    
+
+    def create_user_if_not_exists(phone, password, question, answer, role, full_name):
+        user = User.query.filter_by(phone_number=phone).first()
+        if not user:
+            new_user = User(
+                phone_number=phone,
+                password_hash=generate_password_hash(password),
+                security_question=question,
+                security_answer=answer,
+                role=role,
+                is_approved=True,
+                full_name=full_name
+            )
+            db.session.add(new_user)
+            logging.info(f"User created: {role} - {full_name}")
+
+    create_user_if_not_exists("0000000000", "admin123", "What is your favorite color?", "blue", "admin", "System Administrator")
+    create_user_if_not_exists("1111111111", "manager123", "What city were you born in?", "chicago", "manager", "Demo Manager")
+    create_user_if_not_exists("2222222222", "employee123", "What was your first pet's name?", "buddy", "employee", "Demo Employee")
+
     db.session.commit()
 
-# Import routes
+# Import your routes last to avoid circular imports
 import routes
+
+if __name__ == "__main__":
+    # Optional: Run Flask dev server (not recommended on Render, which uses gunicorn)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
